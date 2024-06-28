@@ -1,54 +1,43 @@
-import importlib
-from fire import Fire
+import argparse
 
 
-class Controller:
-    def up(self, debug=False):
-        """
-        Run the web application and build the cache if needed.
-        """
-        import nevua.app as app
+def run_app(debug=False):
+    from nevua.app import main
 
-        app.main(debug)
+    main(debug)
 
-    def cache(self, hp=None):
-        """
-        Just cache the data. It doesn't run the web app.
-        """
-        from nevua.app import process_data
 
-        if hp:
-            print(f"Hyperparameters: {hp}")
-            process_data(hp=hp)
-        else:
-            process_data()
+def cache_data(hp=None):
+    from nevua.app import process_data
 
-    if importlib.util.find_spec("sigopt"):
-
-        def new_experiment(self, apikey):
-            """
-            Create a new SigOpt experiment.
-            """
-            from nevua.extras.optim import create_experiment
-
-            print(create_experiment(apikey))
-
-        def continue_experiment(self, apikey, exp_id):
-            """
-            Continue running a SigOpt experiment.
-            """
-            from nevua.extras.optim import continue_experiment
-
-            continue_experiment(apikey, exp_id)
-
-        def clean_experiment(self, apikey, exp_id):
-            """
-            Remove any dangling state from a SigOpt experiment.
-            """
-            from nevua.extras.optim import clean_experiment
-
-            clean_experiment(apikey, exp_id)
+    if hp:
+        print(f"Hyperparameters: {hp}")
+    process_data(hp=hp)
 
 
 def main():
-    Fire(Controller)
+    parser = argparse.ArgumentParser(
+        description="Control the web application and data processing."
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    up_parser = subparsers.add_parser("up", help="Run the web application")
+    up_parser.add_argument("--debug", action="store_true", help="Enable debug mode")
+
+    cache_parser = subparsers.add_parser(
+        "cache", help="Cache the data without running the web app"
+    )
+    cache_parser.add_argument(
+        "--hp", type=str, help="Hyperparameters for processing data"
+    )
+
+    args = parser.parse_args()
+
+    if args.command == "up":
+        run_app(debug=args.debug)
+    elif args.command == "cache":
+        cache_data(hp=args.hp)
+
+
+if __name__ == "__main__":
+    main()
