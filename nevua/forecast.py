@@ -120,18 +120,16 @@ def forecast(
 
     return us_counties, final_list, metrics
 
-def process_data(log_metrics=True, hp: dict = HYPERPARAMETERS) -> (pd.DataFrame, dict, Sequence, dict, int, int):
-    Path('data').mkdir(exist_ok=True)
+
+def process_data(
+    log_metrics=True, hp: dict = HYPERPARAMETERS
+) -> (pd.DataFrame, dict, Sequence, dict, int, int):
+    Path("data").mkdir(exist_ok=True)
 
     fips_metadata = get_fips_data()
 
-    # 86400 = how many seconds there are in a day
-    # 75600 = how many seconds there are in 21 hours
-    counties_is_fresh = FORECAST_PATH.exists() and (
-        time() - FORECAST_PATH.stat().st_ctime) < 75600
-
-    if counties_is_fresh and FORECAST_PATH.exists():
-        with open(FORECAST_PATH, 'rb') as fd:
+    if FORECAST_PATH.exists():
+        with open(FORECAST_PATH, "rb") as fd:
             us_counties, final_list, metrics, us_cases, us_deaths = pickle.load(fd)
     else:
         print("Forecast missing or stale. Downloading fresh data...")
