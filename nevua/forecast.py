@@ -1,3 +1,4 @@
+import gzip
 import json
 import warnings
 import pickle
@@ -18,7 +19,7 @@ COUNTRIES_URL = (
 )
 USA_URL = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us.csv"
 FIPS_PATH = Path("data", "us-fips.json")
-FORECAST_PATH = Path("data", "forecast.pickle")
+FORECAST_PATH = Path("data", "forecast.pickle.gz")
 
 # Hyperparameters
 HYPERPARAMETERS = {
@@ -126,7 +127,7 @@ def process_data(
     fips_metadata = get_fips_data()
 
     if FORECAST_PATH.exists():
-        with open(FORECAST_PATH, "rb") as fd:
+        with gzip.open(FORECAST_PATH, "rb") as fd:
             us_counties, final_list, metrics, us_cases, us_deaths = pickle.load(fd)
     else:
         print("Forecast missing or stale. Downloading fresh data...")
@@ -140,7 +141,7 @@ def process_data(
         else:
             print("Forecasting...")
             us_counties, final_list, metrics = forecast(us_counties, log_metrics, hp)
-        with open(FORECAST_PATH, "wb") as fd:
+        with gzip.open(FORECAST_PATH, "wb") as fd:
             pickle.dump((us_counties, final_list, metrics, us_cases, us_deaths), fd)
 
     return us_counties, fips_metadata, final_list[:10], metrics, us_cases, us_deaths
