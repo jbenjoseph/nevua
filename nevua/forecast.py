@@ -11,35 +11,40 @@ import pandas as pd
 from pmdarima.arima import AutoARIMA
 from pmdarima.model_selection import train_test_split
 
+# URLs and Paths
+FIPS_URL = "https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json"
+COUNTRIES_URL = (
+    "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv"
+)
+USA_URL = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us.csv"
+FIPS_PATH = Path("data", "us-fips.json")
+FORECAST_PATH = Path("data", "forecast.pickle")
 
-FIPS_URL = 'https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json'
-COUNTRIES_URL = 'https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv'
-USA_URL = 'https://raw.githubusercontent.com/nytimes/covid-19-data/master/us.csv'
-FIPS_PATH = Path('data', 'us-fips.json')
-FORECAST_PATH = Path('data', 'forecast.pickle')
-
+# Hyperparameters
 HYPERPARAMETERS = {
-    'horizon': 7,
-    'information_criterion': 'hqic',
-    'method': 'nm',
-    'scoring': 'mae',
-    'maxiter': 180,
-    'start_p': 3,
-    'max_p': 30,
-    'start_q': 3,
-    'max_q': 18,
-    'max_d': 18
+    "horizon": 7,
+    "information_criterion": "hqic",
+    "method": "nm",
+    "scoring": "mae",
+    "maxiter": 180,
+    "start_p": 3,
+    "max_p": 30,
+    "start_q": 3,
+    "max_q": 18,
+    "max_d": 18,
 }
+
 
 def get_fips_data() -> dict:
     if not FIPS_PATH.exists():
-        print('FIPS data missing, downloading...')
+        print("FIPS data missing, downloading...")
         urlretrieve(FIPS_URL, FIPS_PATH)
-    
+
     with open(FIPS_PATH) as fd:
         fips_metadata = json.load(fd)
-    
+
     return fips_metadata
+
 
 def get_counties_data(url: str = None) -> pd.DataFrame:
     if not url:
@@ -51,27 +56,28 @@ def get_counties_data(url: str = None) -> pd.DataFrame:
 
     return us_counties
 
+
 def get_us_data() -> (int, int):
     last_row = pd.read_csv(USA_URL).iloc[-1]
-    return last_row['cases'], last_row['deaths']
+    return last_row["cases"], last_row["deaths"]
 
-def forecast(us_counties: pd.DataFrame, log_metrics: bool, hp: dict, metric_threshold: int = 5):
+
+def forecast(
+    us_counties: pd.DataFrame, log_metrics: bool, hp: dict, metric_threshold: int = 5
+):
     metrics = {}
     growth_rates = {}
-    horizon = hp['horizon']
+    horizon = hp["horizon"]
     metric_skip = 0
 
-    for location in tqdm(
-            us_counties['location'].unique(),
-            unit=' counties'):
-        if log_metrics:
-            if metric_skip == metric_threshold:
-                metric_skip = 0
-            else: 
-                metric_skip += 1
-                continue
-        y = us_counties[us_counties.location == location].reset_index()[
-            'cases']
+    for location in tqdm(us_counties["location"].unique(), unit=" counties"):
+        if log_metrics and metric_skip != metric_threshold:
+            metric_skip += 1
+            continue
+        metric_skip = 0
+        y = us_counties[us_counties.location == location]["cases"].reset_index(
+            drop=True
+        )
         if len(y) < horizon:
             continue
         model = AutoARIMA(**hp)
@@ -128,18 +134,18 @@ def process_data(log_metrics=True, hp: dict = HYPERPARAMETERS) -> (pd.DataFrame,
         with open(FORECAST_PATH, 'rb') as fd:
             us_counties, final_list, metrics, us_cases, us_deaths = pickle.load(fd)
     else:
-        print('Forecast missing or stale. Downloading fresh data...')
+        print("Forecast missing or stale. Downloading fresh data...")
         us_counties = get_counties_data()
         us_cases, us_deaths = get_us_data()
         if log_metrics:
-            print('Forecasting...')
+            print("Forecasting...")
             us_counties, final_list, _ = forecast(us_counties, False, hp)
-            print('Measuring accuracy of forecast...')
+            print("Measuring accuracy of forecast...")
             _, _, metrics = forecast(us_counties, log_metrics, hp)
         else:
-            print('Forecasting...')
+            print("Forecasting...")
             us_counties, final_list, metrics = forecast(us_counties, log_metrics, hp)
-        with open(FORECAST_PATH, 'wb') as fd:
+        with open(FORECAST_PATH, "wb") as fd:
             pickle.dump((us_counties, final_list, metrics, us_cases, us_deaths), fd)
 
     return us_counties, fips_metadata, final_list[:10], metrics, us_cases, us_deaths
