@@ -83,32 +83,28 @@ def forecast(
             continue
         model = AutoARIMA(**hp)
         with warnings.catch_warnings():
-            # When there is no cases, it will throw a warning
             warnings.filterwarnings("ignore")
             try:
                 if log_metrics:
                     y, yv = train_test_split(y, test_size=horizon)
                 model.fit(y)
                 predictions = model.predict(n_periods=horizon)
-            # Value error very rarely with weird/broken time series data
             except (ValueError, IndexError):
                 continue
             if log_metrics:
-                metrics[location] = np.mean(np.abs(yv - predictions) /
-                                        (np.abs(yv) + np.abs(predictions)))
-            last_forecast = predictions[len(predictions) - 1]
-            todays_cases = y[len(y) - 1]
-            # Places with very small amount of cases are hard to predict
-            case_handicap = min(1.0, 0.5 + (todays_cases / 120))
-            growth = (last_forecast / todays_cases) * case_handicap
-            growth_rates[location] = growth
+                metrics[location] = np.mean(
+                    np.abs(yv - predictions) / (np.abs(yv) + np.abs(predictions))
+                )
+            if not predictions.empty:
+                last_forecast = predictions.iloc[-1]
+                todays_cases = y.iloc[-1]
+                case_handicap = min(1.0, 0.5 + (todays_cases / 120))
+                growth = (last_forecast / todays_cases) * case_handicap
+                growth_rates[location] = growth
 
     final_list = [
-        i[0]
-        for i in sorted(
-            growth_rates.items(),
-            key=lambda i: i[1],
-            reverse=True)]
+        i[0] for i in sorted(growth_rates.items(), key=lambda i: i[1], reverse=True)
+    ]
 
     def rank_risk(row) -> int:
         case_growth = growth_rates.get(row.location)
@@ -117,7 +113,7 @@ def forecast(
         return round(max(0, (case_growth - 1) * 100))
 
     if not log_metrics:
-        us_counties['outbreak_risk'] = us_counties.apply(rank_risk, axis=1)
+        us_counties["outbreak_risk"] = us_counties.apply(rank_risk, axis=1)
 
     return us_counties, final_list, metrics
 
