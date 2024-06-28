@@ -65,12 +65,21 @@ def get_us_data() -> (int, int):
 
 
 def forecast(
-    us_counties: pd.DataFrame, log_metrics: bool, hp: dict, metric_threshold: int = 5
+    us_counties: pd.DataFrame,
+    log_metrics: bool,
+    hp: dict,
+    metric_threshold: int = 5,
+    start_date: str = "2020-11-15",
 ):
+    print(f"Starting forecast as if it was {start_date}")
     metrics = {}
     growth_rates = {}
     horizon = hp["horizon"]
     metric_skip = 0
+
+    # Filter data starting from the specified start date
+    us_counties["date"] = pd.to_datetime(us_counties["date"])
+    us_counties = us_counties[us_counties["date"] < pd.to_datetime(start_date)]
 
     for location in tqdm(us_counties["location"].unique(), unit=" counties"):
         if log_metrics and metric_skip != metric_threshold:
