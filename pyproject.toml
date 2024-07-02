@@ -5,7 +5,7 @@ description = "Dashboards to analyze the spread of the novel coronavirus."
 authors = ["JJ Ben-Joseph <opensource@tensorspace.ai>"]
 license = "Apache"
 repository = "https://www.github.com/jbenjoseph/nevua"
-readme = "README.rst"
+readme = "README.md"
 keywords = ["machine_learning", "artificial_intelligence", "dashboard", "forecasting"]
 classifiers = [
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
